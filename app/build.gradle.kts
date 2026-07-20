@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.kotlinx.coroutines.android)
 
+    implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("androidx.compose.material3:material3-window-size-class:1.3.1")
     implementation("androidx.compose.animation:animation-graphics:1.7.5")
 
