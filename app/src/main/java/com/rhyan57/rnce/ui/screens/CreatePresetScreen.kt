@@ -1,5 +1,19 @@
 package com.rhyan57.rnce.ui.screens
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.ContactsContract
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -60,13 +75,57 @@ fun CreatePresetScreen(
     var tgTarget      by remember { mutableStateOf((d as? NfcPresetData.TelegramData)?.usernameOrPhone ?: "") }
     var waPhone       by remember { mutableStateOf((d as? NfcPresetData.WhatsAppData)?.phone ?: "") }
 
+    val context = LocalContext.current
+
+    val pickContact = rememberLauncherForActivityResult(ActivityResultContracts.PickContact()) { uri: Uri? ->
+        uri?.let {
+            val cursor = context.contentResolver.query(it, null, null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val nameIndex = it.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
+                    if (nameIndex >= 0) {
+                        val fullName = it.getString(nameIndex) ?: ""
+                        cFirst = fullName.substringBefore(" ")
+                        cLast = fullName.substringAfter(" ", "")
+                    }
+                    val hasPhoneIndex = it.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER)
+                    if (hasPhoneIndex >= 0 && it.getInt(hasPhoneIndex) > 0) {
+                        val id = it.getString(it.getColumnIndex(ContactsContract.Contacts._ID))
+                        val phoneCursor = context.contentResolver.query(
+                            ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null,
+                            ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?", arrayOf(id), null
+                        )
+                        phoneCursor?.use { pc ->
+                            if (pc.moveToFirst()) {
+                                val phoneIndex = pc.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                                if (phoneIndex >= 0) cPhone = pc.getString(phoneIndex) ?: ""
+                            }
+                        }
+                    }
+                    val emailCursor = context.contentResolver.query(
+                        ContactsContract.CommonDataKinds.Email.CONTENT_URI, null,
+                        ContactsContract.CommonDataKinds.Email.CONTACT_ID + " = ?", arrayOf(id), null
+                    )
+                    emailCursor?.use { ec ->
+                        if (ec.moveToFirst()) {
+                            val emailIndex = ec.getColumnIndex(ContactsContract.CommonDataKinds.Email.DATA)
+                            if (emailIndex >= 0) cEmail = ec.getString(emailIndex) ?: ""
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     val pc = Color(selectedColor)
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = pc,
         focusedLabelColor = pc,
         cursorColor = pc,
         unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
+        unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
     )
 
     LazyColumn(
@@ -169,7 +228,7 @@ fun CreatePresetScreen(
 
         item {
             FormSection("Details")
-            Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp).animateContentSize(tween(300)), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = title, onValueChange = { title = it },
                     label = { Text("Title *") },
@@ -190,16 +249,22 @@ fun CreatePresetScreen(
 
         item {
             FormSection("NFC Data — ${selectedType.label}")
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                when (selectedType) {
-                    NfcType.URL      -> SingleField("URL (https://...)", urlValue, { urlValue = it }, fieldColors, KeyboardType.Uri)
-                    NfcType.URI      -> SingleField("URI", uriValue, { uriValue = it }, fieldColors)
-                    NfcType.TEXT     -> SingleField("Plain Text", textValue, { textValue = it }, fieldColors, maxLines = 6)
-                    NfcType.TELEGRAM -> SingleField("@username or +55...", tgTarget, { tgTarget = it }, fieldColors)
-                    NfcType.WHATSAPP -> SingleField("Phone (+55 11 99999-9999)", waPhone, { waPhone = it }, fieldColors, KeyboardType.Phone)
-                    NfcType.CONTACT  -> ContactFields(cFirst,{cFirst=it},cLast,{cLast=it},cPhone,{cPhone=it},cEmail,{cEmail=it},cCompany,{cCompany=it},cTitle,{cTitle=it},cWebsite,{cWebsite=it},cNotes,{cNotes=it},fieldColors)
-                    NfcType.WIFI     -> WifiFields(wSsid,{wSsid=it},wPass,{wPass=it},wOpen,{wOpen=it},fieldColors)
-                    NfcType.LOCATION -> GeoFields(gLat,{gLat=it},gLon,{gLon=it},fieldColors)
+            Column(modifier = Modifier.padding(horizontal = 16.dp).animateContentSize(tween(300))) {
+                AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn(tween(300)) + slideInVertically(tween(300), initialOffsetY = { it / 2 }),
+                    exit = fadeOut(tween(300)) + slideOutVertically(tween(300), targetOffsetY = { -it / 2 })
+                ) {
+                    when (selectedType) {
+                        NfcType.URL      -> SingleField("URL (https://...)", urlValue, { urlValue = it }, fieldColors, KeyboardType.Uri)
+                        NfcType.URI      -> SingleField("URI", uriValue, { uriValue = it }, fieldColors)
+                        NfcType.TEXT     -> SingleField("Plain Text", textValue, { textValue = it }, fieldColors, maxLines = 6)
+                        NfcType.TELEGRAM -> SingleField("@username or +55...", tgTarget, { tgTarget = it }, fieldColors)
+                        NfcType.WHATSAPP -> SingleField("Phone (+55 11 99999-9999)", waPhone, { waPhone = it }, fieldColors, KeyboardType.Phone)
+                        NfcType.CONTACT  -> ContactFields(cFirst,{cFirst=it},cLast,{cLast=it},cPhone,{cPhone=it},cEmail,{cEmail=it},cCompany,{cCompany=it},cTitle,{cTitle=it},cWebsite,{cWebsite=it},cNotes,{cNotes=it},fieldColors, onPickContact = { pickContact.launch(null) })
+                        NfcType.WIFI     -> WifiFields(wSsid,{wSsid=it},wPass,{wPass=it},wOpen,{wOpen=it},fieldColors, onScanWifi = { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) })
+                        NfcType.LOCATION -> GeoFields(gLat,{gLat=it},gLon,{gLon=it},fieldColors)
+                    }
                 }
             }
             Spacer(Modifier.height(28.dp))
@@ -291,9 +356,18 @@ private fun ContactFields(
     jobTitle: String, onJobTitle: (String) -> Unit,
     website: String, onWebsite: (String) -> Unit,
     notes: String, onNotes: (String) -> Unit,
-    colors: TextFieldColors
+    colors: TextFieldColors,
+    onPickContact: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Import from Contacts", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+            OutlinedButton(onClick = onPickContact, shape = RoundedCornerShape(10.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+                Icon(Icons.Outlined.PersonSearch, null, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Select", fontSize = 12.sp)
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(first, onFirst, label = { Text("First Name *") }, modifier = Modifier.weight(1f), colors = colors, singleLine = true, shape = RoundedCornerShape(12.dp))
             OutlinedTextField(last,  onLast,  label = { Text("Last Name") },    modifier = Modifier.weight(1f), colors = colors, singleLine = true, shape = RoundedCornerShape(12.dp))
@@ -312,9 +386,18 @@ private fun WifiFields(
     ssid: String, onSsid: (String) -> Unit,
     password: String, onPassword: (String) -> Unit,
     isOpen: Boolean, onOpen: (Boolean) -> Unit,
-    colors: TextFieldColors
+    colors: TextFieldColors,
+    onScanWifi: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Import from System", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+            OutlinedButton(onClick = onScanWifi, shape = RoundedCornerShape(10.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+                Icon(Icons.Outlined.Wifi, null, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Select", fontSize = 12.sp)
+            }
+        }
         OutlinedTextField(ssid, onSsid, label = { Text("Network Name (SSID)") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, shape = RoundedCornerShape(12.dp))
         Row(
             modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)).padding(horizontal = 16.dp, vertical = 8.dp),
