@@ -1,11 +1,15 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.rhyan57.rnce.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,12 +24,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rhyan57.rnce.hooks.MainViewModel
 import com.rhyan57.rnce.model.NfcPreset
 import com.rhyan57.rnce.ui.components.PresetCard
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 @Composable
 fun HomeScreen(
@@ -132,20 +145,11 @@ fun HomeScreen(
                     Spacer(Modifier.height(28.dp))
 
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.size(180.dp)) {
-                        if (isEmulating) {
-                            CircularWavyProgressIndicator(
-                                modifier = Modifier.size(140.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                            )
-                        } else {
-                            CircularWavyProgressIndicator(
-                                progress = { 1f },
-                                modifier = Modifier.size(140.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                            )
-                        }
+                        CustomWavyProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            isEmulating = isEmulating
+                        )
                         
                         Box(
                             modifier = Modifier
@@ -296,5 +300,68 @@ fun HomeScreen(
                 TextButton(onClick = { deleteConfirmId = null }) { Text("Cancel") }
             }
         )
+    }
+}
+
+@Composable
+private fun CustomWavyProgressIndicator(
+    modifier: Modifier = Modifier,
+    color: Color,
+    trackColor: Color,
+    isEmulating: Boolean
+) {
+    val transition = rememberInfiniteTransition(label = "wavy")
+    val rotation by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = if (isEmulating) 2000 else 6000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+    val wavePhase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = if (isEmulating) 1000 else 3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "wave"
+    )
+
+    Canvas(modifier = modifier.size(140.dp)) {
+        val center = Offset(this.size.width / 2f, this.size.height / 2f)
+        val radius = this.size.minDimension / 2.5f
+        val amplitude = if (isEmulating) 12f else 6f
+        val wavelength = 6
+
+        val trackPath = Path().apply {
+            for (i in 0..360 step 5) {
+                val angle = Math.toRadians(i.toDouble())
+                val r = radius
+                val x = center.x + cos(angle).toFloat() * r
+                val y = center.y + sin(angle).toFloat() * r
+                if (i == 0) moveTo(x, y) else lineTo(x, y)
+            }
+            close()
+        }
+        drawPath(trackPath, color = trackColor, style = Stroke(width = 8f, cap = StrokeCap.Round))
+
+        val wavePath = Path().apply {
+            for (i in 0..360 step 2) {
+                val angle = Math.toRadians(i.toDouble())
+                val wave = sin(angle * wavelength + wavePhase).toFloat() * amplitude
+                val r = radius + wave
+                val x = center.x + cos(angle).toFloat() * r
+                val y = center.y + sin(angle).toFloat() * r
+                if (i == 0) moveTo(x, y) else lineTo(x, y)
+            }
+            close()
+        }
+
+        rotate(degrees = rotation, pivot = center) {
+            drawPath(wavePath, color = color, style = Stroke(width = 8f, cap = StrokeCap.Round))
+        }
     }
 }
