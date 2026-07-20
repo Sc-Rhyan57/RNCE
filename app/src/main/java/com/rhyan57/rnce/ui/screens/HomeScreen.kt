@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
-
 package com.rhyan57.rnce.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
@@ -20,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -133,17 +132,21 @@ fun HomeScreen(
 
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.size(180.dp)) {
                         if (isEmulating) {
-                            CircularWavyProgressIndicator(
+                            CircularProgressIndicator(
                                 modifier = Modifier.size(140.dp),
+                                strokeWidth = 6.dp,
                                 color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                strokeCap = StrokeCap.Round
                             )
                         } else {
-                            CircularWavyProgressIndicator(
+                            CircularProgressIndicator(
                                 progress = { 1f },
                                 modifier = Modifier.size(140.dp),
+                                strokeWidth = 6.dp,
                                 color = MaterialTheme.colorScheme.surfaceVariant,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                strokeCap = StrokeCap.Round
                             )
                         }
                         
