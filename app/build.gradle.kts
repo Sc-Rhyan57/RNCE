@@ -53,5 +53,19 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.gson)
     implementation(libs.kotlinx.coroutines.android)
+
+    implementation("androidx.compose.material3:material3-window-size-class:1.3.1")
+    implementation("androidx.compose.animation:animation-graphics:1.7.5")
+
+    implementation("com.airbnb.android:lottie-compose:6.5.2")
+
+    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.coil-kt:coil-gif:2.7.0")
+    implementation("io.coil-kt:coil-svg:2.7.0")
+
+    implementation("ir.mahozad.multiplatform:wavy-slider:2.2.0")
+
+    implementation("br.com.devsrsouza.compose.icons.android:lucide:1.1.0")
+
     debugImplementation(libs.androidx.ui.tooling)
 }
