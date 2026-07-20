@@ -85,7 +85,7 @@ fun HomeScreen(
         item {
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(500)) + slideInVertically(tween(500), initialOffsetY = { -40 })
+                enter = fadeIn(tween(1000)) + slideInVertically(tween(1000), initialOffsetY = { -40 })
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(top = 48.dp, bottom = 8.dp),
@@ -96,29 +96,14 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Outlined.Waves, 
-                                null, 
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(28.dp)
+                        Column {
+                            Text(
+                                "RNCE",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                letterSpacing = 0.sp
                             )
-                            Spacer(Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    "RNCE",
-                                    style = MaterialTheme.typography.headlineLarge,
-                                    fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                    letterSpacing = 1.sp
-                                )
-                                Text(
-                                    "RFID NFC Card Emulator",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    letterSpacing = 1.sp
-                                )
-                            }
                         }
                         
                         val statusOk = nfcEnabled && nfcSupported
@@ -237,7 +222,7 @@ fun HomeScreen(
             item {
                 AnimatedVisibility(
                     visible = visible,
-                    enter = fadeIn(tween(800, delayMillis = 200))
+                    enter = fadeIn(tween(1200, delayMillis = 300))
                 ) {
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
@@ -269,7 +254,7 @@ fun HomeScreen(
             item {
                 AnimatedVisibility(
                     visible = visible,
-                    enter = fadeIn(tween(500, delayMillis = 100))
+                    enter = fadeIn(tween(1000, delayMillis = 200))
                 ) {
                     Text(
                         "YOUR PRESETS",
@@ -284,7 +269,7 @@ fun HomeScreen(
             itemsIndexed(presets, key = { _, it -> it.id }) { index, preset ->
                 AnimatedVisibility(
                     visible = visible,
-                    enter = fadeIn(tween(400, delayMillis = 150 + index * 50)) + slideInVertically(tween(400), initialOffsetY = { 40 })
+                    enter = fadeIn(tween(800, delayMillis = 200 + index * 80)) + slideInVertically(tween(800), initialOffsetY = { 40 })
                 ) {
                     PresetCard(
                         preset = preset,
@@ -328,29 +313,29 @@ private fun SpiralWaveLoader(
     val rawRotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(20000, easing = LinearEasing), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(60000, easing = LinearEasing), RepeatMode.Restart),
         label = "rawRot"
     )
     val rawTime by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 100f,
-        animationSpec = infiniteRepeatable(tween(1000, easing = LinearEasing), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart),
         label = "rawTime"
     )
 
     val animatedAmplitude by animateFloatAsState(
-        targetValue = if (isEmulating) 28f else 8f,
-        animationSpec = tween(1200, easing = EaseInOutCubic),
+        targetValue = if (isEmulating) 22f else 6f,
+        animationSpec = tween(2000, easing = EaseInOutCubic),
         label = "amp"
     )
     val animatedSpeed by animateFloatAsState(
-        targetValue = if (isEmulating) 6f else 1.5f,
-        animationSpec = tween(1200, easing = EaseInOutCubic),
+        targetValue = if (isEmulating) 2.5f else 1.0f,
+        animationSpec = tween(2000, easing = EaseInOutCubic),
         label = "speed"
     )
     val animatedStrokeWidth by animateFloatAsState(
-        targetValue = if (isEmulating) 6f else 3.5f,
-        animationSpec = tween(1200, easing = EaseInOutCubic),
+        targetValue = if (isEmulating) 5f else 2.5f,
+        animationSpec = tween(2000, easing = EaseInOutCubic),
         label = "stroke"
     )
 
