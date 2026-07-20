@@ -14,10 +14,13 @@ import com.rhyan57.rnce.model.NfcPresetData
 import java.lang.reflect.Type
 
 class NfcPresetDataAdapter : JsonSerializer<NfcPresetData>, JsonDeserializer<NfcPresetData> {
+
+    private val pureGson = Gson()
+
     override fun serialize(src: NfcPresetData, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
         val obj = JsonObject()
         obj.addProperty("type", src::class.simpleName)
-        obj.add("data", context.serialize(src))
+        obj.add("data", pureGson.toJsonTree(src))
         return obj
     }
 
@@ -25,15 +28,16 @@ class NfcPresetDataAdapter : JsonSerializer<NfcPresetData>, JsonDeserializer<Nfc
         val obj = json.asJsonObject
         val type = obj.get("type").asString
         val data = obj.get("data").asJsonObject
+
         return when (type) {
-            "UrlData" -> context.deserialize(data, NfcPresetData.UrlData::class.java)
-            "UriData" -> context.deserialize(data, NfcPresetData.UriData::class.java)
-            "TextData" -> context.deserialize(data, NfcPresetData.TextData::class.java)
-            "ContactData" -> context.deserialize(data, NfcPresetData.ContactData::class.java)
-            "WifiData" -> context.deserialize(data, NfcPresetData.WifiData::class.java)
-            "LocationData" -> context.deserialize(data, NfcPresetData.LocationData::class.java)
-            "TelegramData" -> context.deserialize(data, NfcPresetData.TelegramData::class.java)
-            "WhatsAppData" -> context.deserialize(data, NfcPresetData.WhatsAppData::class.java)
+            "UrlData" -> pureGson.fromJson(data, NfcPresetData.UrlData::class.java)
+            "UriData" -> pureGson.fromJson(data, NfcPresetData.UriData::class.java)
+            "TextData" -> pureGson.fromJson(data, NfcPresetData.TextData::class.java)
+            "ContactData" -> pureGson.fromJson(data, NfcPresetData.ContactData::class.java)
+            "WifiData" -> pureGson.fromJson(data, NfcPresetData.WifiData::class.java)
+            "LocationData" -> pureGson.fromJson(data, NfcPresetData.LocationData::class.java)
+            "TelegramData" -> pureGson.fromJson(data, NfcPresetData.TelegramData::class.java)
+            "WhatsAppData" -> pureGson.fromJson(data, NfcPresetData.WhatsAppData::class.java)
             else -> NfcPresetData.TextData("")
         }
     }
