@@ -5,6 +5,7 @@ import androidx.compose.animation.core.EaseInOutCubic
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -95,20 +96,31 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column {
-                            Text(
-                                "RNCE",
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                letterSpacing = 2.sp
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Outlined.Waves, 
+                                null, 
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
                             )
-                            Text(
-                                "NFC Card Emulator",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    "RNCE",
+                                    style = MaterialTheme.typography.headlineLarge,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    letterSpacing = 1.sp
+                                )
+                                Text(
+                                    "RFID NFC Card Emulator",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    letterSpacing = 1.sp
+                                )
+                            }
                         }
+                        
                         val statusOk = nfcEnabled && nfcSupported
                         Surface(
                             shape = RoundedCornerShape(20.dp),
@@ -149,21 +161,23 @@ fun HomeScreen(
 
                     Spacer(Modifier.height(28.dp))
 
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(160.dp)) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(180.dp)) {
                         SpiralWaveLoader(
                             color = MaterialTheme.colorScheme.primary,
                             isEmulating = isEmulating
                         )
                         Box(
                             modifier = Modifier
-                                .size(80.dp)
+                                .size(72.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(0.9f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = if (isEmulating) "📡" else "💳",
-                                fontSize = 36.sp
+                            Icon(
+                                imageVector = if (isEmulating) Icons.Outlined.WifiTethering else Icons.Outlined.Nfc,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(32.dp)
                             )
                         }
                     }
@@ -230,7 +244,11 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("💳", fontSize = 48.sp)
+                            Icon(
+                                Icons.Outlined.Nfc, null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                modifier = Modifier.size(56.dp)
+                            )
                             Spacer(Modifier.height(14.dp))
                             Text(
                                 "No presets yet",
@@ -307,35 +325,52 @@ private fun SpiralWaveLoader(
     isEmulating: Boolean
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "spiral")
-    val rotation by infiniteTransition.animateFloat(
+    val rawRotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing), RepeatMode.Restart),
-        label = "rotation"
+        animationSpec = infiniteRepeatable(tween(20000, easing = LinearEasing), RepeatMode.Restart),
+        label = "rawRot"
     )
-    val wavePhase by infiniteTransition.animateFloat(
+    val rawTime by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = (2 * PI).toFloat(),
-        animationSpec = infiniteRepeatable(tween(if (isEmulating) 500 else 1500, easing = LinearEasing), RepeatMode.Restart),
-        label = "wave"
+        targetValue = 100f,
+        animationSpec = infiniteRepeatable(tween(1000, easing = LinearEasing), RepeatMode.Restart),
+        label = "rawTime"
     )
 
-    Canvas(modifier = modifier.size(160.dp)) {
+    val animatedAmplitude by animateFloatAsState(
+        targetValue = if (isEmulating) 28f else 8f,
+        animationSpec = tween(1200, easing = EaseInOutCubic),
+        label = "amp"
+    )
+    val animatedSpeed by animateFloatAsState(
+        targetValue = if (isEmulating) 6f else 1.5f,
+        animationSpec = tween(1200, easing = EaseInOutCubic),
+        label = "speed"
+    )
+    val animatedStrokeWidth by animateFloatAsState(
+        targetValue = if (isEmulating) 6f else 3.5f,
+        animationSpec = tween(1200, easing = EaseInOutCubic),
+        label = "stroke"
+    )
+
+    Canvas(modifier = modifier.size(180.dp)) {
         val center = Offset(this.size.width / 2f, this.size.height / 2f)
-        val baseRadius = this.size.minDimension / 3.2f
-        val amplitude = if (isEmulating) 16f else 6f
+        val baseRadius = this.size.minDimension / 3.5f
         val layers = 3
 
         for (layer in 0 until layers) {
             val path = Path()
             val steps = 180
-            val layerRadius = baseRadius - (layer * 22f)
-            val waveCount = 6 + layer * 2
-            val layerRotation = if (layer % 2 == 0) rotation else -rotation * 1.5f
+            val layerRadius = baseRadius - (layer * 24f)
+            val waveCount = 5 + layer * 2
+            
+            val layerRotation = rawRotation * (if (layer % 2 == 0) 1f else -1.5f) * (animatedSpeed * 0.2f)
+            val wavePhase = rawTime * animatedSpeed + layer
 
             for (i in 0..steps) {
                 val angle = (i.toFloat() / steps) * 2 * PI
-                val wave = sin(angle * waveCount + wavePhase + layer).toFloat() * amplitude
+                val wave = sin(angle * waveCount + wavePhase).toFloat() * animatedAmplitude
                 val r = layerRadius + wave
                 val x = center.x + cos(angle).toFloat() * r
                 val y = center.y + sin(angle).toFloat() * r
@@ -347,7 +382,7 @@ private fun SpiralWaveLoader(
                 drawPath(
                     path = path,
                     color = color.copy(alpha = 0.9f - (layer * 0.25f)),
-                    style = Stroke(width = 3.5f, cap = StrokeCap.Round)
+                    style = Stroke(width = animatedStrokeWidth, cap = StrokeCap.Round)
                 )
             }
         }
