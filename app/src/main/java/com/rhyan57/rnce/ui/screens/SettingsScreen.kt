@@ -261,7 +261,7 @@ fun SettingsScreen(vm: MainViewModel) {
                                     Icon(Icons.Outlined.Code, contentDescription = null)
                                 }
                                 FilledTonalButton(
-                                    onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://dsc.gg/betterproject"))) },
+                                    onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://dsc.gg/betterstar"))) },
                                     modifier = Modifier.weight(1f).height(48.dp)
                                 ) {
                                     Icon(Icons.Outlined.Forum, contentDescription = null)
