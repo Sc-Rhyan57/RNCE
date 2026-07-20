@@ -1,6 +1,5 @@
 package com.rhyan57.rnce.ui.screens
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
@@ -80,17 +79,17 @@ fun CreatePresetScreen(
     val pickContact = rememberLauncherForActivityResult(ActivityResultContracts.PickContact()) { uri: Uri? ->
         uri?.let {
             val cursor = context.contentResolver.query(it, null, null, null, null)
-            cursor?.use {
-                if (it.moveToFirst()) {
-                    val nameIndex = it.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
+            cursor?.use { c ->
+                if (c.moveToFirst()) {
+                    val id = c.getString(c.getColumnIndexOrThrow(ContactsContract.Contacts._ID)) ?: return@use
+                    val nameIndex = c.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
                     if (nameIndex >= 0) {
-                        val fullName = it.getString(nameIndex) ?: ""
+                        val fullName = c.getString(nameIndex) ?: ""
                         cFirst = fullName.substringBefore(" ")
                         cLast = fullName.substringAfter(" ", "")
                     }
-                    val hasPhoneIndex = it.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER)
-                    if (hasPhoneIndex >= 0 && it.getInt(hasPhoneIndex) > 0) {
-                        val id = it.getString(it.getColumnIndex(ContactsContract.Contacts._ID))
+                    val hasPhoneIndex = c.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER)
+                    if (hasPhoneIndex >= 0 && c.getInt(hasPhoneIndex) > 0) {
                         val phoneCursor = context.contentResolver.query(
                             ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null,
                             ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?", arrayOf(id), null
