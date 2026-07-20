@@ -23,8 +23,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rhyan57.rnce.model.*
-import com.rhyan57.rnce.ui.theme.AppColors
-import com.rhyan57.rnce.ui.theme.Radius
 import com.rhyan57.rnce.utils.IconName
 import com.rhyan57.rnce.utils.NfcTypeIconName
 import com.rhyan57.rnce.utils.toImageVector
@@ -66,11 +64,13 @@ fun CreatePresetScreen(
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = pc,
         focusedLabelColor = pc,
-        cursorColor = pc
+        cursorColor = pc,
+        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
     )
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(AppColors.Background),
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(bottom = 120.dp)
     ) {
         item {
@@ -79,12 +79,12 @@ fun CreatePresetScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onCancel) {
-                    Icon(Icons.Outlined.ArrowBack, null, tint = AppColors.TextSecondary)
+                    Icon(Icons.Outlined.ArrowBack, null, tint = MaterialTheme.colorScheme.onBackground)
                 }
                 Text(
                     if (editPreset != null) "Edit Preset" else "New Preset",
-                    fontSize = 22.sp, fontWeight = FontWeight.ExtraBold,
-                    color = AppColors.TextPrimary
+                    fontSize = 24.sp, fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
@@ -99,45 +99,48 @@ fun CreatePresetScreen(
                     FilterChip(
                         selected = type == selectedType,
                         onClick = { selectedType = type; selectedIcon = NfcTypeIconName(type) },
-                        label = { Text(type.label, fontSize = 12.sp) },
+                        label = { Text(type.label, fontSize = 12.sp, fontWeight = FontWeight.Medium) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = pc.copy(0.2f),
-                            selectedLabelColor = pc
+                            selectedLabelColor = pc,
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                         ),
                         border = FilterChipDefaults.filterChipBorder(
                             enabled = true,
                             selected = type == selectedType,
-                            selectedBorderColor = pc.copy(0.5f)
+                            selectedBorderColor = pc.copy(0.5f),
+                            unselectedBorderColor = MaterialTheme.colorScheme.outline.copy(0.2f)
                         )
                     )
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
         }
 
         item {
             FormSection("Color")
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(PresetColor.PRESETS) { preset ->
                     val c = Color(preset.hex)
                     val sel = preset.hex == selectedColor
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
                             .background(c)
-                            .then(if (sel) Modifier.border(2.5.dp, Color.White, CircleShape) else Modifier)
+                            .then(if (sel) Modifier.border(3.dp, MaterialTheme.colorScheme.onBackground, CircleShape) else Modifier)
                             .clickable { selectedColor = preset.hex },
                         contentAlignment = Alignment.Center
                     ) {
-                        if (sel) Icon(Icons.Outlined.Check, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        if (sel) Icon(Icons.Outlined.Check, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
         }
 
         item {
@@ -150,37 +153,39 @@ fun CreatePresetScreen(
                     val sel = icon == selectedIcon
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (sel) pc.copy(0.2f) else AppColors.Surface)
-                            .then(if (sel) Modifier.border(1.5.dp, pc.copy(0.6f), RoundedCornerShape(10.dp)) else Modifier)
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (sel) pc.copy(0.2f) else MaterialTheme.colorScheme.surface)
+                            .then(if (sel) Modifier.border(1.5.dp, pc, RoundedCornerShape(12.dp)) else Modifier.border(1.dp, MaterialTheme.colorScheme.outline.copy(0.1f), RoundedCornerShape(12.dp)))
                             .clickable { selectedIcon = icon },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(icon.toImageVector(), null, tint = if (sel) pc else AppColors.TextMuted, modifier = Modifier.size(20.dp))
+                        Icon(icon.toImageVector(), null, tint = if (sel) pc else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
                     }
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
         }
 
         item {
             FormSection("Details")
-            Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = title, onValueChange = { title = it },
                     label = { Text("Title *") },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = fieldColors, singleLine = true
+                    colors = fieldColors, singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
                 )
                 OutlinedTextField(
                     value = description, onValueChange = { description = it },
                     label = { Text("Description (optional)") },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = fieldColors, maxLines = 3
+                    colors = fieldColors, maxLines = 3,
+                    shape = RoundedCornerShape(12.dp)
                 )
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
         }
 
         item {
@@ -197,7 +202,7 @@ fun CreatePresetScreen(
                     NfcType.LOCATION -> GeoFields(gLat,{gLat=it},gLon,{gLon=it},fieldColors)
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(28.dp))
         }
 
         item {
@@ -206,11 +211,11 @@ fun CreatePresetScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
-                    onClick = onCancel, modifier = Modifier.weight(1f),
-                    shape = Radius.Button,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.TextMuted),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Divider)
-                ) { Text("Cancel") }
+                    onClick = onCancel, modifier = Modifier.weight(1f).height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(0.2f))
+                ) { Text("Cancel", fontWeight = FontWeight.Bold) }
 
                 Button(
                     onClick = {
@@ -236,12 +241,12 @@ fun CreatePresetScreen(
                             nfcData = nfcData
                         ))
                     },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = pc),
-                    shape = Radius.Button,
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = pc, contentColor = Color.White),
+                    shape = RoundedCornerShape(14.dp),
                     enabled = title.isNotBlank()
                 ) {
-                    Icon(Icons.Outlined.Save, null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Outlined.Save, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(if (editPreset != null) "Update" else "Create", fontWeight = FontWeight.Bold)
                 }
@@ -253,9 +258,9 @@ fun CreatePresetScreen(
 @Composable
 private fun FormSection(text: String) {
     Text(
-        text.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold,
-        color = AppColors.TextMuted, letterSpacing = 1.2.sp,
-        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+        text.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.2.sp,
+        modifier = Modifier.padding(start = 16.dp, bottom = 10.dp)
     )
 }
 
@@ -271,7 +276,8 @@ private fun SingleField(
         label = { Text(label) },
         modifier = Modifier.fillMaxWidth(),
         colors = colors, singleLine = maxLines == 1, maxLines = maxLines,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        shape = RoundedCornerShape(12.dp)
     )
 }
 
@@ -287,17 +293,17 @@ private fun ContactFields(
     notes: String, onNotes: (String) -> Unit,
     colors: TextFieldColors
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(first, onFirst, label = { Text("First Name *") }, modifier = Modifier.weight(1f), colors = colors, singleLine = true)
-            OutlinedTextField(last,  onLast,  label = { Text("Last Name") },    modifier = Modifier.weight(1f), colors = colors, singleLine = true)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(first, onFirst, label = { Text("First Name *") }, modifier = Modifier.weight(1f), colors = colors, singleLine = true, shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(last,  onLast,  label = { Text("Last Name") },    modifier = Modifier.weight(1f), colors = colors, singleLine = true, shape = RoundedCornerShape(12.dp))
         }
-        OutlinedTextField(phone,   onPhone,   label = { Text("Phone") },   modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
-        OutlinedTextField(email,   onEmail,   label = { Text("Email") },   modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
-        OutlinedTextField(company, onCompany, label = { Text("Company") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true)
-        OutlinedTextField(jobTitle,onJobTitle,label = { Text("Job Title") },modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true)
-        OutlinedTextField(website, onWebsite, label = { Text("Website") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true)
-        OutlinedTextField(notes,   onNotes,   label = { Text("Notes") },   modifier = Modifier.fillMaxWidth(), colors = colors, maxLines = 3)
+        OutlinedTextField(phone,   onPhone,   label = { Text("Phone") },   modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), shape = RoundedCornerShape(12.dp))
+        OutlinedTextField(email,   onEmail,   label = { Text("Email") },   modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), shape = RoundedCornerShape(12.dp))
+        OutlinedTextField(company, onCompany, label = { Text("Company") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, shape = RoundedCornerShape(12.dp))
+        OutlinedTextField(jobTitle,onJobTitle,label = { Text("Job Title") },modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, shape = RoundedCornerShape(12.dp))
+        OutlinedTextField(website, onWebsite, label = { Text("Website") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, shape = RoundedCornerShape(12.dp))
+        OutlinedTextField(notes,   onNotes,   label = { Text("Notes") },   modifier = Modifier.fillMaxWidth(), colors = colors, maxLines = 3, shape = RoundedCornerShape(12.dp))
     }
 }
 
@@ -308,18 +314,18 @@ private fun WifiFields(
     isOpen: Boolean, onOpen: (Boolean) -> Unit,
     colors: TextFieldColors
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedTextField(ssid, onSsid, label = { Text("Network Name (SSID)") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(ssid, onSsid, label = { Text("Network Name (SSID)") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, shape = RoundedCornerShape(12.dp))
         Row(
-            modifier = Modifier.fillMaxWidth().background(AppColors.Surface, RoundedCornerShape(10.dp)).padding(horizontal = 14.dp, vertical = 6.dp),
+            modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Open network (no password)", color = AppColors.TextSecondary, modifier = Modifier.weight(1f), fontSize = 14.sp)
+            Text("Open network (no password)", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f), fontSize = 14.sp)
             Switch(checked = isOpen, onCheckedChange = onOpen,
-                colors = SwitchDefaults.colors(checkedThumbColor = AppColors.Primary, checkedTrackColor = AppColors.Primary.copy(0.3f)))
+                colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.onPrimary, checkedTrackColor = MaterialTheme.colorScheme.primary, uncheckedThumbColor = MaterialTheme.colorScheme.outline, uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant))
         }
         if (!isOpen) {
-            OutlinedTextField(password, onPassword, label = { Text("Password (min 8 chars)") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true)
+            OutlinedTextField(password, onPassword, label = { Text("Password (min 8 chars)") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, shape = RoundedCornerShape(12.dp))
         }
     }
 }
@@ -330,8 +336,8 @@ private fun GeoFields(
     lon: String, onLon: (String) -> Unit,
     colors: TextFieldColors
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedTextField(lat, onLat, label = { Text("Latitude (−90 to 90)") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-        OutlinedTextField(lon, onLon, label = { Text("Longitude (−180 to 180)") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(lat, onLat, label = { Text("Latitude (−90 to 90)") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), shape = RoundedCornerShape(12.dp))
+        OutlinedTextField(lon, onLon, label = { Text("Longitude (−180 to 180)") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), shape = RoundedCornerShape(12.dp))
     }
 }
