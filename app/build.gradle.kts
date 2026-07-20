@@ -67,5 +67,6 @@ dependencies {
 
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
+
     debugImplementation(libs.androidx.ui.tooling)
 }
