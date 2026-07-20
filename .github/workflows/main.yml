@@ -1,5 +1,4 @@
 name: Build
-
 on:
   workflow_dispatch:
     inputs:
@@ -23,10 +22,48 @@ permissions:
   contents: write
 
 jobs:
+  # ─── Keystore (apenas release) ─────────────────────────────────────────────
+  setup-keystore:
+    if: inputs.buildType == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check or generate keystore.jks
+        run: |
+          KEYSTORE_PATH="app/keystore.jks"
+
+          if [ -f "$KEYSTORE_PATH" ]; then
+            echo "✅ keystore.jks já existe — nada a fazer."
+          else
+            echo "🔑 Gerando novo keystore.jks..."
+            keytool -genkeypair \
+              -alias release \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -keystore "$KEYSTORE_PATH" \
+              -storepass "${{ secrets.KEYSTORE_STORE_PASSWORD }}" \
+              -keypass  "${{ secrets.KEYSTORE_KEY_PASSWORD }}" \
+              -dname    "CN=${{ secrets.KEYSTORE_CN || 'Release' }}, OU=Android, O=App, L=BR, ST=BR, C=BR" \
+              -noprompt
+
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add "$KEYSTORE_PATH"
+            git commit -m "chore: add release keystore.jks [skip ci]"
+            git push
+            echo "✅ keystore.jks gerado e enviado ao repositório."
+          fi
+
   # ─── Android ───────────────────────────────────────────────────────────────
   build-android:
     if: inputs.target == 'android' || inputs.target == 'both'
     runs-on: ubuntu-latest
+    needs:
+      - setup-keystore
     steps:
       - uses: actions/checkout@v4
 
@@ -39,8 +76,36 @@ jobs:
         with:
           gradle-version: '8.7'
 
+      - name: Configure signing (release only)
+        if: inputs.buildType == 'release'
+        run: |
+          cat >> app/build.gradle <<'EOF'
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile     file("keystore.jks")
+                      storePassword System.getenv("KEYSTORE_STORE_PASSWORD")
+                      keyAlias      "release"
+                      keyPassword   System.getenv("KEYSTORE_KEY_PASSWORD")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          EOF
+        env:
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD:   ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+
       - name: Build APK
         run: gradle :app:assemble${{ inputs.buildType == 'release' && 'Release' || 'Debug' }}
+        env:
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD:   ${{ secrets.KEYSTORE_KEY_PASSWORD }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
