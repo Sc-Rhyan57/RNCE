@@ -47,14 +47,15 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
+    
+    implementation("androidx.compose.material3:material3:1.4.0-beta01")
+    
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.gson)
     implementation(libs.kotlinx.coroutines.android)
 
-    implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("androidx.compose.material3:material3-window-size-class:1.3.1")
     implementation("androidx.compose.animation:animation-graphics:1.7.5")
 
@@ -63,6 +64,8 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-gif:2.7.0")
     implementation("io.coil-kt:coil-svg:2.7.0")
+
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 
     debugImplementation(libs.androidx.ui.tooling)
 }
