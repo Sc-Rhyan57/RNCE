@@ -1,0 +1,4 @@
+-keep class com.rhyan57.rnce.model.** { *; }
+-keep class com.luigivampa92.ndefemulation.** { *; }
+-keepattributes Signature
+-keepattributes *Annotation*
