@@ -1,10 +1,10 @@
 package com.rhyan57.rnce.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -18,8 +18,6 @@ import com.rhyan57.rnce.hooks.MainViewModel
 import com.rhyan57.rnce.model.NfcPreset
 import com.rhyan57.rnce.ui.components.NfcStatusBall
 import com.rhyan57.rnce.ui.components.PresetCard
-import com.rhyan57.rnce.ui.theme.AppColors
-import com.rhyan57.rnce.ui.theme.Radius
 
 @Composable
 fun HomeScreen(
@@ -55,7 +53,7 @@ fun HomeScreen(
 
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxSize().background(AppColors.Background),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 110.dp)
     ) {
         item {
@@ -71,34 +69,41 @@ fun HomeScreen(
                     Column {
                         Text(
                             "RNCE",
-                            fontSize = 28.sp,
+                            style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.ExtraBold,
-                            color = AppColors.TextPrimary,
+                            color = MaterialTheme.colorScheme.onBackground,
                             letterSpacing = 2.sp
                         )
-                        Text("NFC Card Emulator", fontSize = 12.sp, color = AppColors.TextMuted)
+                        Text(
+                            "NFC Card Emulator",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     val statusOk = nfcEnabled && nfcSupported
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                if (isEmulating) AppColors.Primary.copy(0.15f)
-                                else if (statusOk) AppColors.Success.copy(0.12f)
-                                else AppColors.Error.copy(0.12f),
-                                Radius.Badge
-                            )
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = when {
+                            isEmulating -> MaterialTheme.colorScheme.primary.copy(0.15f)
+                            statusOk -> MaterialTheme.colorScheme.tertiary.copy(0.15f)
+                            else -> MaterialTheme.colorScheme.error.copy(0.15f)
+                        },
+                        contentColor = when {
+                            isEmulating -> MaterialTheme.colorScheme.primary
+                            statusOk -> MaterialTheme.colorScheme.tertiary
+                            else -> MaterialTheme.colorScheme.error
+                        }
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Icon(
                                 if (statusOk) Icons.Outlined.Nfc else Icons.Outlined.WifiOff,
                                 null,
-                                tint = if (isEmulating) AppColors.Primary
-                                       else if (statusOk) AppColors.Success
-                                       else AppColors.Error,
                                 modifier = Modifier.size(14.dp)
                             )
-                            Spacer(Modifier.width(5.dp))
+                            Spacer(Modifier.width(6.dp))
                             Text(
                                 when {
                                     !nfcSupported -> "Not supported"
@@ -106,11 +111,8 @@ fun HomeScreen(
                                     isEmulating   -> "Emulating"
                                     else          -> "Ready"
                                 },
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isEmulating) AppColors.Primary
-                                        else if (statusOk) AppColors.Success
-                                        else AppColors.Error
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -134,21 +136,21 @@ fun HomeScreen(
                         presets.isEmpty() -> "No presets yet — tap + to create one"
                         else            -> "Select a preset to start emulating"
                     },
-                    fontSize = 13.sp,
-                    color = if (isEmulating) AppColors.Primary else AppColors.TextMuted
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isEmulating) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 if (!nfcEnabled && nfcSupported) {
                     Spacer(Modifier.height(10.dp))
                     OutlinedButton(
                         onClick = { vm.openNfcSettings() },
-                        shape = Radius.Button,
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.Warning),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Warning.copy(0.4f))
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(0.4f))
                     ) {
                         Icon(Icons.Outlined.Settings, null, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Enable NFC", fontSize = 12.sp)
+                        Text("Enable NFC")
                     }
                 }
 
@@ -156,20 +158,20 @@ fun HomeScreen(
                     Spacer(Modifier.height(10.dp))
                     OutlinedButton(
                         onClick = { vm.deactivate() },
-                        shape = Radius.Button,
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.Error),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Error.copy(0.35f))
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(0.35f))
                     ) {
                         Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Stop Emulation", fontSize = 12.sp)
+                        Text("Stop Emulation")
                     }
                 }
 
                 Spacer(Modifier.height(20.dp))
                 HorizontalDivider(
-                    color = AppColors.Divider,
-                    modifier = Modifier.padding(horizontal = 20.dp)
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
                 )
             }
         }
@@ -183,21 +185,20 @@ fun HomeScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             Icons.Outlined.Nfc, null,
-                            tint = AppColors.TextMuted.copy(0.4f),
+                            tint = MaterialTheme.colorScheme.outline.copy(0.4f),
                             modifier = Modifier.size(56.dp)
                         )
                         Spacer(Modifier.height(14.dp))
                         Text(
                             "No presets yet",
-                            color = AppColors.TextMuted,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             "Tap the + button below to create your first",
-                            color = AppColors.TextMuted.copy(0.6f),
-                            fontSize = 13.sp
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                     }
                 }
@@ -206,9 +207,9 @@ fun HomeScreen(
             item {
                 Text(
                     "YOUR PRESETS",
-                    fontSize = 10.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = AppColors.TextMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier.padding(start = 20.dp, top = 10.dp, bottom = 4.dp)
                 )
@@ -236,14 +237,11 @@ fun HomeScreen(
                 TextButton(onClick = {
                     deleteConfirmId?.let { vm.deletePreset(it) }
                     deleteConfirmId = null
-                }) { Text("Delete", color = AppColors.Error, fontWeight = FontWeight.Bold) }
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = { deleteConfirmId = null }) { Text("Cancel") }
-            },
-            containerColor = AppColors.Surface,
-            titleContentColor = AppColors.TextPrimary,
-            textContentColor = AppColors.TextSecondary
+            }
         )
     }
 }
