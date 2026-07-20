@@ -5,8 +5,10 @@ package com.rhyan57.rnce.ui.screens
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Location
 import android.location.LocationManager
 import android.net.Uri
+import android.net.wifi.WifiManager
 import android.provider.ContactsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -86,48 +88,56 @@ fun CreatePresetScreen(
 
     val pickContact = rememberLauncherForActivityResult(ActivityResultContracts.PickContact()) { uri: Uri? ->
         uri?.let {
-            val cursor = context.contentResolver.query(it, null, null, null, null)
-            cursor?.use { c ->
-                if (c.moveToFirst()) {
-                    val id = c.getString(c.getColumnIndexOrThrow(ContactsContract.Contacts._ID)) ?: return@use
-                    val nameIndex = c.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
-                    if (nameIndex >= 0) {
-                        val fullName = c.getString(nameIndex) ?: ""
-                        cFirst = fullName.substringBefore(" ")
-                        cLast = fullName.substringAfter(" ", "")
-                    }
-                    val hasPhoneIndex = c.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER)
-                    if (hasPhoneIndex >= 0 && c.getInt(hasPhoneIndex) > 0) {
-                        val phoneCursor = context.contentResolver.query(
-                            ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null,
-                            ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?", arrayOf(id), null
-                        )
-                        phoneCursor?.use { pc ->
-                            if (pc.moveToFirst()) {
-                                val phoneIndex = pc.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-                                if (phoneIndex >= 0) cPhone = pc.getString(phoneIndex) ?: ""
+            try {
+                val cursor = context.contentResolver.query(it, null, null, null, null)
+                cursor?.use { c ->
+                    if (c.moveToFirst()) {
+                        val idIndex = c.getColumnIndex(ContactsContract.Contacts._ID)
+                        val id = if (idIndex >= 0) c.getString(idIndex) else null
+                        
+                        val nameIndex = c.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
+                        if (nameIndex >= 0) {
+                            val fullName = c.getString(nameIndex) ?: ""
+                            cFirst = fullName.substringBefore(" ")
+                            cLast = fullName.substringAfter(" ", "")
+                        }
+
+                        if (id != null) {
+                            val hasPhoneIndex = c.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER)
+                            if (hasPhoneIndex >= 0 && c.getInt(hasPhoneIndex) > 0) {
+                                val phoneCursor = context.contentResolver.query(
+                                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null,
+                                    ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?", arrayOf(id), null
+                                )
+                                phoneCursor?.use { pc ->
+                                    if (pc.moveToFirst()) {
+                                        val phoneIndex = pc.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                                        if (phoneIndex >= 0) cPhone = pc.getString(phoneIndex) ?: ""
+                                    }
+                                }
+                            }
+
+                            val emailCursor = context.contentResolver.query(
+                                ContactsContract.CommonDataKinds.Email.CONTENT_URI, null,
+                                ContactsContract.CommonDataKinds.Email.CONTACT_ID + " = ?", arrayOf(id), null
+                            )
+                            emailCursor?.use { ec ->
+                                if (ec.moveToFirst()) {
+                                    val emailIndex = ec.getColumnIndex(ContactsContract.CommonDataKinds.Email.DATA)
+                                    if (emailIndex >= 0) cEmail = ec.getString(emailIndex) ?: ""
+                                }
                             }
                         }
                     }
-                    val emailCursor = context.contentResolver.query(
-                        ContactsContract.CommonDataKinds.Email.CONTENT_URI, null,
-                        ContactsContract.CommonDataKinds.Email.CONTACT_ID + " = ?", arrayOf(id), null
-                    )
-                    emailCursor?.use { ec ->
-                        if (ec.moveToFirst()) {
-                            val emailIndex = ec.getColumnIndex(ContactsContract.CommonDataKinds.Email.DATA)
-                            if (emailIndex >= 0) cEmail = ec.getString(emailIndex) ?: ""
-                        }
-                    }
                 }
+            } catch (e: SecurityException) {
+                e.printStackTrace()
             }
         }
     }
 
     val requestContactPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) {
-            pickContact.launch(null)
-        }
+        if (isGranted) pickContact.launch(null)
     }
 
     val requestLocationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -135,8 +145,15 @@ fun CreatePresetScreen(
             locationLoading = true
             try {
                 val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                    ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                var location: Location? = null
+                
+                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                    location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                } 
+                if (location == null && locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                    location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                }
+
                 if (location != null) {
                     gLat = location.latitude.toString()
                     gLon = location.longitude.toString()
@@ -328,7 +345,8 @@ fun CreatePresetScreen(
                                     onExpandedChange = { wifiMenuExpanded = it },
                                     onScanWifi = { 
                                         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                                            val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                                            val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                                            wifiManager.startScan()
                                             wifiList = wifiManager.scanResults.map { it.SSID }.filter { it.isNotEmpty() }.distinct()
                                             wifiMenuExpanded = true
                                         } else {
@@ -343,8 +361,15 @@ fun CreatePresetScreen(
                                             locationLoading = true
                                             try {
                                                 val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                                                val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                                                    ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                                                var location: Location? = null
+                                                
+                                                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                                                    location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                                                } 
+                                                if (location == null && locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                                                    location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                                                }
+
                                                 if (location != null) {
                                                     gLat = location.latitude.toString()
                                                     gLon = location.longitude.toString()
