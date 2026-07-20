@@ -2,9 +2,9 @@ package com.rhyan57.rnce.ui.screens
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -18,8 +18,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rhyan57.rnce.hooks.MainViewModel
-import com.rhyan57.rnce.ui.theme.AppColors
-import com.rhyan57.rnce.ui.theme.Radius
 
 @Composable
 fun SettingsScreen(vm: MainViewModel) {
@@ -32,13 +30,13 @@ fun SettingsScreen(vm: MainViewModel) {
     val nfcSupported  by vm.nfcSupported.collectAsState()
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(AppColors.Background),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 110.dp)
     ) {
         item {
             Column(modifier = Modifier.padding(horizontal = 20.dp).padding(top = 52.dp, bottom = 8.dp)) {
-                Text("Settings", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = AppColors.TextPrimary)
-                Text("Preferences & configuration", fontSize = 13.sp, color = AppColors.TextMuted)
+                Text("Settings", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+                Text("Preferences & configuration", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -52,7 +50,7 @@ fun SettingsScreen(vm: MainViewModel) {
                     Icon(
                         if (nfcEnabled && nfcSupported) Icons.Outlined.Nfc else Icons.Outlined.WifiOff,
                         null,
-                        tint = if (nfcEnabled && nfcSupported) AppColors.Success else AppColors.Error,
+                        tint = if (nfcEnabled && nfcSupported) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(22.dp)
                     )
                     Spacer(Modifier.width(14.dp))
@@ -63,8 +61,8 @@ fun SettingsScreen(vm: MainViewModel) {
                                 nfcEnabled    -> "NFC is enabled"
                                 else          -> "NFC is disabled"
                             },
-                            fontWeight = FontWeight.SemiBold,
-                            color = AppColors.TextPrimary
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             when {
@@ -72,13 +70,13 @@ fun SettingsScreen(vm: MainViewModel) {
                                 nfcEnabled    -> "Ready for NFC Type-4 HCE emulation"
                                 else          -> "Enable NFC to use emulation"
                             },
-                            fontSize = 12.sp,
-                            color = AppColors.TextMuted
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     if (!nfcEnabled && nfcSupported) {
                         TextButton(onClick = { vm.openNfcSettings() }) {
-                            Text("Enable", color = AppColors.Primary, fontSize = 12.sp)
+                            Text("Enable", color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -137,29 +135,37 @@ fun SettingsScreen(vm: MainViewModel) {
             SectionTitle("About")
             SettingsCard {
                 Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Nfc, null, tint = AppColors.Primary, modifier = Modifier.size(30.dp))
+                    Icon(Icons.Outlined.Nfc, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(30.dp))
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("RNCE", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = AppColors.TextPrimary)
-                        Text("NFC Card Emulator", fontSize = 12.sp, color = AppColors.TextSecondary)
-                        Text("v1.0 · by Rhyan57", fontSize = 11.sp, color = AppColors.TextMuted)
+                        Text("RNCE", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                        Text("NFC Card Emulator", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("v1.0 · by Rhyan57", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 CardDivider()
-                OutlinedButton(
-                    onClick = {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Sc-Rhyan57/RNCE"))
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.TextMuted),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Divider),
-                    shape = Radius.Button
-                ) {
-                    Icon(Icons.Outlined.Code, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Sc-Rhyan57 on GitHub", fontSize = 13.sp)
+                Column(modifier = Modifier.padding(12.dp)) {
+                    OutlinedButton(
+                        onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Sc-Rhyan57"))) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+                    ) {
+                        Icon(Icons.Outlined.Code, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("GitHub Profile")
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://dsc.gg/betterproject"))) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+                    ) {
+                        Icon(Icons.Outlined.Forum, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Join Discord")
+                    }
                 }
             }
         }
@@ -169,8 +175,8 @@ fun SettingsScreen(vm: MainViewModel) {
 @Composable
 private fun SectionTitle(text: String) {
     Text(
-        text.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold,
-        color = AppColors.TextMuted, letterSpacing = 1.2.sp,
+        text.uppercase(), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.2.sp,
         modifier = Modifier.padding(start = 20.dp, bottom = 6.dp)
     )
 }
@@ -179,14 +185,14 @@ private fun SectionTitle(text: String) {
 private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp)
     ) { Column(content = content) }
 }
 
 @Composable
 private fun CardDivider() =
-    HorizontalDivider(color = AppColors.Divider.copy(0.45f), modifier = Modifier.padding(horizontal = 16.dp))
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(0.5f), modifier = Modifier.padding(horizontal = 16.dp))
 
 @Composable
 private fun ToggleRow(
@@ -194,17 +200,19 @@ private fun ToggleRow(
     checked: Boolean, onToggle: (Boolean) -> Unit
 ) {
     Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = AppColors.Primary, modifier = Modifier.size(20.dp))
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.Medium, color = AppColors.TextPrimary, fontSize = 14.sp)
-            Text(subtitle, fontSize = 12.sp, color = AppColors.TextMuted, lineHeight = 16.sp)
+            Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Switch(
             checked = checked, onCheckedChange = onToggle,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = AppColors.Primary,
-                checkedTrackColor = AppColors.Primary.copy(0.3f)
+                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                uncheckedThumbColor = MaterialTheme.colorScheme.surfaceVariant,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
         )
     }
@@ -213,11 +221,11 @@ private fun ToggleRow(
 @Composable
 private fun NfcTypeInfo(icon: ImageVector, name: String, description: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = AppColors.Primary, modifier = Modifier.size(17.dp))
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
         Spacer(Modifier.width(12.dp))
         Column {
-            Text(name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextPrimary)
-            Text(description, fontSize = 11.sp, color = AppColors.TextMuted)
+            Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
