@@ -65,7 +65,5 @@ dependencies {
 
     implementation("ir.mahozad.multiplatform:wavy-slider:2.2.0")
 
-    implementation("br.com.devsrsouza.compose.icons.android:lucide:1.1.0")
-
     debugImplementation(libs.androidx.ui.tooling)
 }
