@@ -1,17 +1,11 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.rhyan57.rnce.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.EaseInOutCubic
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,21 +20,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rhyan57.rnce.hooks.MainViewModel
 import com.rhyan57.rnce.model.NfcPreset
 import com.rhyan57.rnce.ui.components.PresetCard
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 
 @Composable
 fun HomeScreen(
@@ -98,7 +83,7 @@ fun HomeScreen(
                     ) {
                         Column {
                             Text(
-                                "RNCE",
+                                "RNCE by rhyan57",
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Black,
                                 color = MaterialTheme.colorScheme.onBackground,
@@ -147,22 +132,33 @@ fun HomeScreen(
                     Spacer(Modifier.height(28.dp))
 
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.size(180.dp)) {
-                        SpiralWaveLoader(
-                            color = MaterialTheme.colorScheme.primary,
-                            isEmulating = isEmulating
-                        )
+                        if (isEmulating) {
+                            CircularWavyProgressIndicator(
+                                modifier = Modifier.size(140.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                            )
+                        } else {
+                            CircularWavyProgressIndicator(
+                                progress = { 1f },
+                                modifier = Modifier.size(140.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                            )
+                        }
+                        
                         Box(
                             modifier = Modifier
-                                .size(72.dp)
+                                .size(90.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(0.9f)),
+                                .background(MaterialTheme.colorScheme.surface),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = if (isEmulating) Icons.Outlined.WifiTethering else Icons.Outlined.Nfc,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(36.dp)
                             )
                         }
                     }
@@ -300,76 +296,5 @@ fun HomeScreen(
                 TextButton(onClick = { deleteConfirmId = null }) { Text("Cancel") }
             }
         )
-    }
-}
-
-@Composable
-private fun SpiralWaveLoader(
-    modifier: Modifier = Modifier,
-    color: Color,
-    isEmulating: Boolean
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "spiral")
-    val rawRotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(60000, easing = LinearEasing), RepeatMode.Restart),
-        label = "rawRot"
-    )
-    val rawTime by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 100f,
-        animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart),
-        label = "rawTime"
-    )
-
-    val animatedAmplitude by animateFloatAsState(
-        targetValue = if (isEmulating) 22f else 6f,
-        animationSpec = tween(2000, easing = EaseInOutCubic),
-        label = "amp"
-    )
-    val animatedSpeed by animateFloatAsState(
-        targetValue = if (isEmulating) 2.5f else 1.0f,
-        animationSpec = tween(2000, easing = EaseInOutCubic),
-        label = "speed"
-    )
-    val animatedStrokeWidth by animateFloatAsState(
-        targetValue = if (isEmulating) 5f else 2.5f,
-        animationSpec = tween(2000, easing = EaseInOutCubic),
-        label = "stroke"
-    )
-
-    Canvas(modifier = modifier.size(180.dp)) {
-        val center = Offset(this.size.width / 2f, this.size.height / 2f)
-        val baseRadius = this.size.minDimension / 3.5f
-        val layers = 3
-
-        for (layer in 0 until layers) {
-            val path = Path()
-            val steps = 180
-            val layerRadius = baseRadius - (layer * 24f)
-            val waveCount = 5 + layer * 2
-            
-            val layerRotation = rawRotation * (if (layer % 2 == 0) 1f else -1.5f) * (animatedSpeed * 0.2f)
-            val wavePhase = rawTime * animatedSpeed + layer
-
-            for (i in 0..steps) {
-                val angle = (i.toFloat() / steps) * 2 * PI
-                val wave = sin(angle * waveCount + wavePhase).toFloat() * animatedAmplitude
-                val r = layerRadius + wave
-                val x = center.x + cos(angle).toFloat() * r
-                val y = center.y + sin(angle).toFloat() * r
-                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-            }
-            path.close()
-
-            rotate(degrees = layerRotation, pivot = center) {
-                drawPath(
-                    path = path,
-                    color = color.copy(alpha = 0.9f - (layer * 0.25f)),
-                    style = Stroke(width = animatedStrokeWidth, cap = StrokeCap.Round)
-                )
-            }
-        }
     }
 }
