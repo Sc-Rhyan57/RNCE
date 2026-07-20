@@ -36,16 +36,18 @@ jobs:
           distribution: 'temurin'
 
       - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
 
       - name: Build APK
-        run: ./gradlew :app:assemble${{ inputs.buildType == 'release' && 'Release' || 'Debug' }}
+        run: gradle :app:assemble${{ inputs.buildType == 'release' && 'Release' || 'Debug' }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: android
           path: app/build/outputs/apk/${{ inputs.buildType }}/*.apk
-          
+
   # ─── Release única ─────────────────────────────────────────────────────────
   release:
     if: inputs.buildType == 'release'
