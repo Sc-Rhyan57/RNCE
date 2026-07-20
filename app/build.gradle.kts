@@ -63,7 +63,5 @@ dependencies {
     implementation("io.coil-kt:coil-gif:2.7.0")
     implementation("io.coil-kt:coil-svg:2.7.0")
 
-    implementation("ir.mahozad.multiplatform:wavy-slider:2.2.0")
-
     debugImplementation(libs.androidx.ui.tooling)
 }
