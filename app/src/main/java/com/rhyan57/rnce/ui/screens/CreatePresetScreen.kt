@@ -1,9 +1,11 @@
 package com.rhyan57.rnce.ui.screens
 
-import android.content.Intent
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.net.Uri
 import android.provider.ContactsContract
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -36,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.rhyan57.rnce.model.*
 import com.rhyan57.rnce.utils.IconName
 import com.rhyan57.rnce.utils.NfcTypeIconName
@@ -75,6 +78,15 @@ fun CreatePresetScreen(
     var waPhone       by remember { mutableStateOf((d as? NfcPresetData.WhatsAppData)?.phone ?: "") }
 
     val context = LocalContext.current
+    var wifiList      by remember { mutableStateOf(listOf<String>()) }
+    var wifiMenuExpanded by remember { mutableStateOf(false) }
+    var locationLoading by remember { mutableStateOf(false) }
+
+    val requestContactPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) {
+            pickContact.launch(null)
+        }
+    }
 
     val pickContact = rememberLauncherForActivityResult(ActivityResultContracts.PickContact()) { uri: Uri? ->
         uri?.let {
@@ -116,6 +128,24 @@ fun CreatePresetScreen(
         }
     }
 
+    val requestLocationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) {
+            locationLoading = true
+            try {
+                val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                if (location != null) {
+                    gLat = location.latitude.toString()
+                    gLon = location.longitude.toString()
+                }
+                locationLoading = false
+            } catch (e: SecurityException) {
+                locationLoading = false
+            }
+        }
+    }
+
     val pc = Color(selectedColor)
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = pc,
@@ -148,171 +178,239 @@ fun CreatePresetScreen(
         }
 
         item {
-            FormSection("NFC Type")
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(NfcType.values()) { type ->
-                    FilterChip(
-                        selected = type == selectedType,
-                        onClick = { selectedType = type; selectedIcon = NfcTypeIconName(type) },
-                        label = { Text(type.label, fontSize = 12.sp, fontWeight = FontWeight.Medium) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = pc.copy(0.2f),
-                            selectedLabelColor = pc,
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = type == selectedType,
-                            borderColor = MaterialTheme.colorScheme.outline.copy(0.2f),
-                            selectedBorderColor = pc.copy(0.5f)
-                        )
-                    )
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-
-        item {
-            FormSection("Color")
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(PresetColor.PRESETS) { preset ->
-                    val c = Color(preset.hex)
-                    val sel = preset.hex == selectedColor
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(c)
-                            .then(if (sel) Modifier.border(3.dp, MaterialTheme.colorScheme.onBackground, CircleShape) else Modifier)
-                            .clickable { selectedColor = preset.hex },
-                        contentAlignment = Alignment.Center
+            AnimatedVisibility(visible = true, enter = fadeIn(tween(400))) {
+                Column {
+                    FormSection("NFC Type")
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (sel) Icon(Icons.Outlined.Check, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-
-        item {
-            FormSection("Icon")
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(IconName.values()) { icon ->
-                    val sel = icon == selectedIcon
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (sel) pc.copy(0.2f) else MaterialTheme.colorScheme.surface)
-                            .then(if (sel) Modifier.border(1.5.dp, pc, RoundedCornerShape(12.dp)) else Modifier.border(1.dp, MaterialTheme.colorScheme.outline.copy(0.1f), RoundedCornerShape(12.dp)))
-                            .clickable { selectedIcon = icon },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(icon.toImageVector(), null, tint = if (sel) pc else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-
-        item {
-            FormSection("Details")
-            Column(modifier = Modifier.padding(horizontal = 16.dp).animateContentSize(tween(300)), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = title, onValueChange = { title = it },
-                    label = { Text("Title *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = fieldColors, singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
-                )
-                OutlinedTextField(
-                    value = description, onValueChange = { description = it },
-                    label = { Text("Description (optional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = fieldColors, maxLines = 3,
-                    shape = RoundedCornerShape(12.dp)
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-
-        item {
-            FormSection("NFC Data — ${selectedType.label}")
-            Column(modifier = Modifier.padding(horizontal = 16.dp).animateContentSize(tween(300))) {
-                AnimatedVisibility(
-                    visible = true,
-                    enter = fadeIn(tween(300)) + slideInVertically(tween(300), initialOffsetY = { it / 2 }),
-                    exit = fadeOut(tween(300)) + slideOutVertically(tween(300), targetOffsetY = { -it / 2 })
-                ) {
-                    when (selectedType) {
-                        NfcType.URL      -> SingleField("URL (https://...)", urlValue, { urlValue = it }, fieldColors, KeyboardType.Uri)
-                        NfcType.URI      -> SingleField("URI", uriValue, { uriValue = it }, fieldColors)
-                        NfcType.TEXT     -> SingleField("Plain Text", textValue, { textValue = it }, fieldColors, maxLines = 6)
-                        NfcType.TELEGRAM -> SingleField("@username or +55...", tgTarget, { tgTarget = it }, fieldColors)
-                        NfcType.WHATSAPP -> SingleField("Phone (+55 11 99999-9999)", waPhone, { waPhone = it }, fieldColors, KeyboardType.Phone)
-                        NfcType.CONTACT  -> ContactFields(cFirst,{cFirst=it},cLast,{cLast=it},cPhone,{cPhone=it},cEmail,{cEmail=it},cCompany,{cCompany=it},cTitle,{cTitle=it},cWebsite,{cWebsite=it},cNotes,{cNotes=it},fieldColors, onPickContact = { pickContact.launch(null) })
-                        NfcType.WIFI     -> WifiFields(wSsid,{wSsid=it},wPass,{wPass=it},wOpen,{wOpen=it},fieldColors, onScanWifi = { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) })
-                        NfcType.LOCATION -> GeoFields(gLat,{gLat=it},gLon,{gLon=it},fieldColors)
-                    }
-                }
-            }
-            Spacer(Modifier.height(28.dp))
-        }
-
-        item {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onCancel, modifier = Modifier.weight(1f).height(52.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(0.2f))
-                ) { Text("Cancel", fontWeight = FontWeight.Bold) }
-
-                Button(
-                    onClick = {
-                        if (title.isBlank()) return@Button
-                        val nfcData: NfcPresetData = when (selectedType) {
-                            NfcType.URL      -> NfcPresetData.UrlData(urlValue)
-                            NfcType.URI      -> NfcPresetData.UriData(uriValue)
-                            NfcType.TEXT     -> NfcPresetData.TextData(textValue)
-                            NfcType.CONTACT  -> NfcPresetData.ContactData(cFirst,cLast,cPhone,cEmail,cCompany,cTitle,cWebsite,cNotes)
-                            NfcType.WIFI     -> NfcPresetData.WifiData(wSsid,wPass,wOpen)
-                            NfcType.LOCATION -> NfcPresetData.LocationData(gLat.toDoubleOrNull() ?: 0.0, gLon.toDoubleOrNull() ?: 0.0)
-                            NfcType.TELEGRAM -> NfcPresetData.TelegramData(tgTarget)
-                            NfcType.WHATSAPP -> NfcPresetData.WhatsAppData(waPhone)
+                        items(NfcType.values()) { type ->
+                            FilterChip(
+                                selected = type == selectedType,
+                                onClick = { selectedType = type; selectedIcon = NfcTypeIconName(type) },
+                                label = { Text(type.label, fontSize = 12.sp, fontWeight = FontWeight.Medium) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = pc.copy(0.2f),
+                                    selectedLabelColor = pc,
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = type == selectedType,
+                                    borderColor = MaterialTheme.colorScheme.outline.copy(0.2f),
+                                    selectedBorderColor = pc.copy(0.5f)
+                                )
+                            )
                         }
-                        onSave(NfcPreset(
-                            id = editPreset?.id ?: UUID.randomUUID().toString(),
-                            title = title.trim(),
-                            description = description.trim(),
-                            nfcType = selectedType,
-                            iconName = selectedIcon,
-                            colorHex = selectedColor,
-                            createdAt = editPreset?.createdAt ?: System.currentTimeMillis(),
-                            nfcData = nfcData
-                        ))
-                    },
-                    modifier = Modifier.weight(1f).height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = pc, contentColor = Color.White),
-                    shape = RoundedCornerShape(14.dp),
-                    enabled = title.isNotBlank()
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+            }
+        }
+
+        item {
+            AnimatedVisibility(visible = true, enter = fadeIn(tween(500))) {
+                Column {
+                    FormSection("Color")
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(PresetColor.PRESETS) { preset ->
+                            val c = Color(preset.hex)
+                            val sel = preset.hex == selectedColor
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(c)
+                                    .then(if (sel) Modifier.border(3.dp, MaterialTheme.colorScheme.onBackground, CircleShape) else Modifier)
+                                    .clickable { selectedColor = preset.hex },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (sel) Icon(Icons.Outlined.Check, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+            }
+        }
+
+        item {
+            AnimatedVisibility(visible = true, enter = fadeIn(tween(600))) {
+                Column {
+                    FormSection("Icon")
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(IconName.values()) { icon ->
+                            val sel = icon == selectedIcon
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (sel) pc.copy(0.2f) else MaterialTheme.colorScheme.surface)
+                                    .then(if (sel) Modifier.border(1.5.dp, pc, RoundedCornerShape(12.dp)) else Modifier.border(1.dp, MaterialTheme.colorScheme.outline.copy(0.1f), RoundedCornerShape(12.dp)))
+                                    .clickable { selectedIcon = icon },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(icon.toImageVector(), null, tint = if (sel) pc else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+            }
+        }
+
+        item {
+            AnimatedVisibility(visible = true, enter = fadeIn(tween(700))) {
+                Column {
+                    FormSection("Details")
+                    Column(modifier = Modifier.padding(horizontal = 16.dp).animateContentSize(tween(300)), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = title, onValueChange = { title = it },
+                            label = { Text("Title *") },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = fieldColors, singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        OutlinedTextField(
+                            value = description, onValueChange = { description = it },
+                            label = { Text("Description (optional)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = fieldColors, maxLines = 3,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+            }
+        }
+
+        item {
+            AnimatedVisibility(visible = true, enter = fadeIn(tween(800))) {
+                Column {
+                    FormSection("NFC Data — ${selectedType.label}")
+                    Column(modifier = Modifier.padding(horizontal = 16.dp).animateContentSize(tween(300))) {
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn(tween(300)) + slideInVertically(tween(300), initialOffsetY = { it / 2 }),
+                            exit = fadeOut(tween(300)) + slideOutVertically(tween(300), targetOffsetY = { -it / 2 })
+                        ) {
+                            when (selectedType) {
+                                NfcType.URL      -> SingleField("URL (https://...)", urlValue, { urlValue = it }, fieldColors, KeyboardType.Uri)
+                                NfcType.URI      -> SingleField("URI", uriValue, { uriValue = it }, fieldColors)
+                                NfcType.TEXT     -> SingleField("Plain Text", textValue, { textValue = it }, fieldColors, maxLines = 6)
+                                NfcType.TELEGRAM -> SingleField("@username or +55...", tgTarget, { tgTarget = it }, fieldColors)
+                                NfcType.WHATSAPP -> SingleField("Phone (+55 11 99999-9999)", waPhone, { waPhone = it }, fieldColors, KeyboardType.Phone)
+                                NfcType.CONTACT  -> ContactFields(
+                                    cFirst,{cFirst=it},cLast,{cLast=it},cPhone,{cPhone=it},cEmail,{cEmail=it},
+                                    cCompany,{cCompany=it},cTitle,{cTitle=it},cWebsite,{cWebsite=it},cNotes,{cNotes=it},fieldColors, 
+                                    onPickContact = { 
+                                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+                                            pickContact.launch(null)
+                                        } else {
+                                            requestContactPermission.launch(Manifest.permission.READ_CONTACTS)
+                                        }
+                                    }
+                                )
+                                NfcType.WIFI     -> WifiFields(
+                                    wSsid,{wSsid=it},wPass,{wPass=it},wOpen,{wOpen=it},fieldColors,
+                                    wifiList = wifiList,
+                                    expanded = wifiMenuExpanded,
+                                    onExpandedChange = { wifiMenuExpanded = it },
+                                    onScanWifi = { 
+                                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                                            val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                                            wifiList = wifiManager.scanResults.map { it.SSID }.filter { it.isNotEmpty() }.distinct()
+                                            wifiMenuExpanded = true
+                                        } else {
+                                            requestLocationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                                        }
+                                    }
+                                )
+                                NfcType.LOCATION -> GeoFields(
+                                    gLat,{gLat=it},gLon,{gLon=it},fieldColors,
+                                    onGetLocation = {
+                                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                                            locationLoading = true
+                                            try {
+                                                val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                                                val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                                                    ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                                                if (location != null) {
+                                                    gLat = location.latitude.toString()
+                                                    gLon = location.longitude.toString()
+                                                }
+                                                locationLoading = false
+                                            } catch (e: SecurityException) {
+                                                locationLoading = false
+                                            }
+                                        } else {
+                                            requestLocationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                                        }
+                                    },
+                                    isLoading = locationLoading
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(28.dp))
+                }
+            }
+        }
+
+        item {
+            AnimatedVisibility(visible = true, enter = fadeIn(tween(900))) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(Icons.Outlined.Save, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (editPreset != null) "Update" else "Create", fontWeight = FontWeight.Bold)
+                    OutlinedButton(
+                        onClick = onCancel, modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(0.2f))
+                    ) { Text("Cancel", fontWeight = FontWeight.Bold) }
+
+                    Button(
+                        onClick = {
+                            if (title.isBlank()) return@Button
+                            val nfcData: NfcPresetData = when (selectedType) {
+                                NfcType.URL      -> NfcPresetData.UrlData(urlValue)
+                                NfcType.URI      -> NfcPresetData.UriData(uriValue)
+                                NfcType.TEXT     -> NfcPresetData.TextData(textValue)
+                                NfcType.CONTACT  -> NfcPresetData.ContactData(cFirst,cLast,cPhone,cEmail,cCompany,cTitle,cWebsite,cNotes)
+                                NfcType.WIFI     -> NfcPresetData.WifiData(wSsid,wPass,wOpen)
+                                NfcType.LOCATION -> NfcPresetData.LocationData(gLat.toDoubleOrNull() ?: 0.0, gLon.toDoubleOrNull() ?: 0.0)
+                                NfcType.TELEGRAM -> NfcPresetData.TelegramData(tgTarget)
+                                NfcType.WHATSAPP -> NfcPresetData.WhatsAppData(waPhone)
+                            }
+                            onSave(NfcPreset(
+                                id = editPreset?.id ?: UUID.randomUUID().toString(),
+                                title = title.trim(),
+                                description = description.trim(),
+                                nfcType = selectedType,
+                                iconName = selectedIcon,
+                                colorHex = selectedColor,
+                                createdAt = editPreset?.createdAt ?: System.currentTimeMillis(),
+                                nfcData = nfcData
+                            ))
+                        },
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = pc, contentColor = Color.White),
+                        shape = RoundedCornerShape(14.dp),
+                        enabled = title.isNotBlank()
+                    ) {
+                        Icon(Icons.Outlined.Save, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (editPreset != null) "Update" else "Create", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -386,18 +484,57 @@ private fun WifiFields(
     password: String, onPassword: (String) -> Unit,
     isOpen: Boolean, onOpen: (Boolean) -> Unit,
     colors: TextFieldColors,
+    wifiList: List<String>,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     onScanWifi: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Import from System", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+            Text("Scan Networks", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
             OutlinedButton(onClick = onScanWifi, shape = RoundedCornerShape(10.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
                 Icon(Icons.Outlined.Wifi, null, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Select", fontSize = 12.sp)
+                Text("Scan", fontSize = 12.sp)
             }
         }
-        OutlinedTextField(ssid, onSsid, label = { Text("Network Name (SSID)") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, shape = RoundedCornerShape(12.dp))
+        
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = onExpandedChange
+        ) {
+            OutlinedTextField(
+                value = ssid,
+                onValueChange = onSsid,
+                label = { Text("Network Name (SSID)") },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                colors = colors,
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { onExpandedChange(false) }
+            ) {
+                wifiList.forEach { network ->
+                    DropdownMenuItem(
+                        text = { Text(network) },
+                        onClick = {
+                            onSsid(network)
+                            onExpandedChange(false)
+                        }
+                    )
+                }
+                if (wifiList.isEmpty()) {
+                    DropdownMenuItem(
+                        text = { Text("No networks found. Try scanning.") },
+                        onClick = { onExpandedChange(false) }
+                    )
+                }
+            }
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -416,9 +553,23 @@ private fun WifiFields(
 private fun GeoFields(
     lat: String, onLat: (String) -> Unit,
     lon: String, onLon: (String) -> Unit,
-    colors: TextFieldColors
+    colors: TextFieldColors,
+    onGetLocation: () -> Unit,
+    isLoading: Boolean
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Current Location", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+            OutlinedButton(onClick = onGetLocation, shape = RoundedCornerShape(10.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Outlined.MyLocation, null, modifier = Modifier.size(14.dp))
+                }
+                Spacer(Modifier.width(6.dp))
+                Text("Get Location", fontSize = 12.sp)
+            }
+        }
         OutlinedTextField(lat, onLat, label = { Text("Latitude (−90 to 90)") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), shape = RoundedCornerShape(12.dp))
         OutlinedTextField(lon, onLon, label = { Text("Longitude (−180 to 180)") }, modifier = Modifier.fillMaxWidth(), colors = colors, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), shape = RoundedCornerShape(12.dp))
     }
