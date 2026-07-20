@@ -5,10 +5,9 @@ package com.rhyan57.rnce.ui.screens
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Location
-import android.location.LocationManager
 import android.net.Uri
 import android.net.wifi.WifiManager
+import android.os.Looper
 import android.provider.ContactsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -43,6 +42,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.rhyan57.rnce.model.*
 import com.rhyan57.rnce.utils.IconName
 import com.rhyan57.rnce.utils.NfcTypeIconName
@@ -82,6 +84,7 @@ fun CreatePresetScreen(
     var waPhone       by remember { mutableStateOf((d as? NfcPresetData.WhatsAppData)?.phone ?: "") }
 
     val context = LocalContext.current
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     var wifiList      by remember { mutableStateOf(listOf<String>()) }
     var wifiMenuExpanded by remember { mutableStateOf(false) }
     var locationLoading by remember { mutableStateOf(false) }
@@ -94,14 +97,12 @@ fun CreatePresetScreen(
                     if (c.moveToFirst()) {
                         val idIndex = c.getColumnIndex(ContactsContract.Contacts._ID)
                         val id = if (idIndex >= 0) c.getString(idIndex) else null
-                        
                         val nameIndex = c.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
                         if (nameIndex >= 0) {
                             val fullName = c.getString(nameIndex) ?: ""
                             cFirst = fullName.substringBefore(" ")
                             cLast = fullName.substringAfter(" ", "")
                         }
-
                         if (id != null) {
                             val hasPhoneIndex = c.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER)
                             if (hasPhoneIndex >= 0 && c.getInt(hasPhoneIndex) > 0) {
@@ -116,7 +117,6 @@ fun CreatePresetScreen(
                                     }
                                 }
                             }
-
                             val emailCursor = context.contentResolver.query(
                                 ContactsContract.CommonDataKinds.Email.CONTENT_URI, null,
                                 ContactsContract.CommonDataKinds.Email.CONTACT_ID + " = ?", arrayOf(id), null
@@ -140,25 +140,28 @@ fun CreatePresetScreen(
         if (isGranted) pickContact.launch(null)
     }
 
-    val requestLocationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) {
+    val requestLocationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        val granted = permissions.values.any { it }
+        if (granted) {
             locationLoading = true
             try {
-                val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                var location: Location? = null
-                
-                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                    location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                } 
-                if (location == null && locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                    location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-                }
-
-                if (location != null) {
-                    gLat = location.latitude.toString()
-                    gLon = location.longitude.toString()
-                }
-                locationLoading = false
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    if (location != null) {
+                        gLat = location.latitude.toString()
+                        gLon = location.longitude.toString()
+                        locationLoading = false
+                    } else {
+                        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                            .addOnSuccessListener { loc ->
+                                if (loc != null) {
+                                    gLat = loc.latitude.toString()
+                                    gLon = loc.longitude.toString()
+                                }
+                                locationLoading = false
+                            }
+                            .addOnFailureListener { locationLoading = false }
+                    }
+                }.addOnFailureListener { locationLoading = false }
             } catch (e: SecurityException) {
                 locationLoading = false
             }
@@ -346,40 +349,48 @@ fun CreatePresetScreen(
                                     onScanWifi = { 
                                         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                                             val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
-                                            wifiManager.startScan()
-                                            wifiList = wifiManager.scanResults.map { it.SSID }.filter { it.isNotEmpty() }.distinct()
-                                            wifiMenuExpanded = true
+                                            try {
+                                                @Suppress("DEPRECATION")
+                                                wifiManager.startScan()
+                                                wifiList = wifiManager.scanResults.map { it.SSID }.filter { it.isNotEmpty() }.distinct()
+                                                wifiMenuExpanded = true
+                                            } catch (e: SecurityException) {
+                                                e.printStackTrace()
+                                            }
                                         } else {
-                                            requestLocationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                                            requestLocationPermission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
                                         }
                                     }
                                 )
                                 NfcType.LOCATION -> GeoFields(
                                     gLat,{gLat=it},gLon,{gLon=it},fieldColors,
                                     onGetLocation = {
-                                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                                            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                                             locationLoading = true
                                             try {
-                                                val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                                                var location: Location? = null
-                                                
-                                                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                                                    location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                                                } 
-                                                if (location == null && locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                                                    location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-                                                }
-
-                                                if (location != null) {
-                                                    gLat = location.latitude.toString()
-                                                    gLon = location.longitude.toString()
-                                                }
-                                                locationLoading = false
+                                                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                                                    if (location != null) {
+                                                        gLat = location.latitude.toString()
+                                                        gLon = location.longitude.toString()
+                                                        locationLoading = false
+                                                    } else {
+                                                        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                                                            .addOnSuccessListener { loc ->
+                                                                if (loc != null) {
+                                                                    gLat = loc.latitude.toString()
+                                                                    gLon = loc.longitude.toString()
+                                                                }
+                                                                locationLoading = false
+                                                            }
+                                                            .addOnFailureListener { locationLoading = false }
+                                                    }
+                                                }.addOnFailureListener { locationLoading = false }
                                             } catch (e: SecurityException) {
                                                 locationLoading = false
                                             }
                                         } else {
-                                            requestLocationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                                            requestLocationPermission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
                                         }
                                     },
                                     isLoading = locationLoading
