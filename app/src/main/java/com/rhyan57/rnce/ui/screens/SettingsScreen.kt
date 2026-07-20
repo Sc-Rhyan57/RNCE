@@ -149,7 +149,7 @@ fun SettingsScreen(vm: MainViewModel) {
                 OutlinedButton(
                     onClick = {
                         context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Sc-Rhyan57/GetDiscordToken"))
+                            Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Sc-Rhyan57/RNCE"))
                         )
                     },
                     modifier = Modifier.fillMaxWidth().padding(12.dp),
