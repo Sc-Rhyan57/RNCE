@@ -109,8 +109,8 @@ fun CreatePresetScreen(
                         border = FilterChipDefaults.filterChipBorder(
                             enabled = true,
                             selected = type == selectedType,
-                            selectedBorderColor = pc.copy(0.5f),
-                            unselectedBorderColor = MaterialTheme.colorScheme.outline.copy(0.2f)
+                            borderColor = MaterialTheme.colorScheme.outline.copy(0.2f),
+                            selectedBorderColor = pc.copy(0.5f)
                         )
                     )
                 }
