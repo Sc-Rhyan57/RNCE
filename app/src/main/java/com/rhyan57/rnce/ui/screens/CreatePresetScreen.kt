@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.rhyan57.rnce.ui.screens
 
 import android.Manifest
@@ -82,12 +84,6 @@ fun CreatePresetScreen(
     var wifiMenuExpanded by remember { mutableStateOf(false) }
     var locationLoading by remember { mutableStateOf(false) }
 
-    val requestContactPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) {
-            pickContact.launch(null)
-        }
-    }
-
     val pickContact = rememberLauncherForActivityResult(ActivityResultContracts.PickContact()) { uri: Uri? ->
         uri?.let {
             val cursor = context.contentResolver.query(it, null, null, null, null)
@@ -125,6 +121,12 @@ fun CreatePresetScreen(
                     }
                 }
             }
+        }
+    }
+
+    val requestContactPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) {
+            pickContact.launch(null)
         }
     }
 
