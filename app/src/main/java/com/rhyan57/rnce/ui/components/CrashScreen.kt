@@ -70,7 +70,7 @@ fun CrashScreen(trace: String) {
             OutlinedButton(
                 onClick = {
                     ctx.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Sc-Rhyan57/GetDiscordToken"))
+                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Sc-Rhyan57/RNCE"))
                     )
                 },
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
@@ -80,7 +80,7 @@ fun CrashScreen(trace: String) {
             ) {
                 Icon(Icons.Outlined.Code, null, modifier = Modifier.size(16.dp), tint = AppColors.TextMuted)
                 Spacer(Modifier.width(8.dp))
-                Text("Sc-Rhyan57/GetDiscordToken", fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+                Text("Sc-Rhyan57/RNCE", fontFamily = FontFamily.Monospace, fontSize = 13.sp)
             }
 
             Card(
