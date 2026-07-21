@@ -92,6 +92,13 @@ jobs:
         with:
           gradle-version: '8.7'
 
+      - name: Generate Gradle wrapper
+        run: |
+          if [ ! -f "./gradlew" ]; then
+            gradle wrapper --gradle-version 8.7
+            chmod +x ./gradlew
+          fi
+
       - name: Build APK
         run: ./gradlew :app:assemble${{ inputs.buildType == 'release' && 'Release' || 'Debug' }}
         env:
