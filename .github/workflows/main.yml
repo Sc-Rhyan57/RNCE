@@ -22,7 +22,6 @@ permissions:
   contents: write
 
 jobs:
-  # ─── Keystore (apenas release) ─────────────────────────────────────────────
   setup-keystore:
     if: inputs.buildType == 'release'
     runs-on: ubuntu-latest
@@ -32,33 +31,50 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check or generate keystore.jks
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          EXISTING_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          EXISTING_KEY_PASS: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
         run: |
           KEYSTORE_PATH="app/keystore.jks"
 
           if [ -f "$KEYSTORE_PATH" ]; then
-            echo "✅ keystore.jks já existe — nada a fazer."
-          else
-            echo "🔑 Gerando novo keystore.jks..."
-            keytool -genkeypair \
-              -alias release \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -keystore "$KEYSTORE_PATH" \
-              -storepass "${{ secrets.KEYSTORE_STORE_PASSWORD }}" \
-              -keypass  "${{ secrets.KEYSTORE_KEY_PASSWORD }}" \
-              -dname    "CN=${{ secrets.KEYSTORE_CN || 'Release' }}, OU=Android, O=App, L=BR, ST=BR, C=BR" \
-              -noprompt
-
-            git config user.name  "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add "$KEYSTORE_PATH"
-            git commit -m "chore: add release keystore.jks [skip ci]"
-            git push
-            echo "✅ keystore.jks gerado e enviado ao repositório."
+            echo "keystore.jks already exists, skipping."
+            exit 0
           fi
 
-  # ─── Android ───────────────────────────────────────────────────────────────
+          if [ -z "$EXISTING_STORE_PASS" ]; then
+            STORE_PASS=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 32)
+            gh secret set KEYSTORE_STORE_PASSWORD --body "$STORE_PASS" --repo "$REPO"
+          else
+            STORE_PASS="$EXISTING_STORE_PASS"
+          fi
+
+          if [ -z "$EXISTING_KEY_PASS" ]; then
+            KEY_PASS=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 32)
+            gh secret set KEYSTORE_KEY_PASSWORD --body "$KEY_PASS" --repo "$REPO"
+          else
+            KEY_PASS="$EXISTING_KEY_PASS"
+          fi
+
+          keytool -genkeypair \
+            -alias release \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "$STORE_PASS" \
+            -keypass "$KEY_PASS" \
+            -dname "CN=Release, OU=Android, O=App, L=BR, ST=BR, C=BR" \
+            -noprompt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$KEYSTORE_PATH"
+          git commit -m "chore: add release keystore.jks [skip ci]"
+          git push
+
   build-android:
     if: inputs.target == 'android' || inputs.target == 'both'
     runs-on: ubuntu-latest
@@ -76,36 +92,11 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Configure signing (release only)
-        if: inputs.buildType == 'release'
-        run: |
-          cat >> app/build.gradle <<'EOF'
-
-          android {
-              signingConfigs {
-                  release {
-                      storeFile     file("keystore.jks")
-                      storePassword System.getenv("KEYSTORE_STORE_PASSWORD")
-                      keyAlias      "release"
-                      keyPassword   System.getenv("KEYSTORE_KEY_PASSWORD")
-                  }
-              }
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                  }
-              }
-          }
-          EOF
-        env:
-          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          KEYSTORE_KEY_PASSWORD:   ${{ secrets.KEYSTORE_KEY_PASSWORD }}
-
       - name: Build APK
-        run: gradle :app:assemble${{ inputs.buildType == 'release' && 'Release' || 'Debug' }}
+        run: ./gradlew :app:assemble${{ inputs.buildType == 'release' && 'Release' || 'Debug' }}
         env:
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          KEYSTORE_KEY_PASSWORD:   ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -113,7 +104,6 @@ jobs:
           name: android
           path: app/build/outputs/apk/${{ inputs.buildType }}/*.apk
 
-  # ─── Release única ─────────────────────────────────────────────────────────
   release:
     if: inputs.buildType == 'release'
     runs-on: ubuntu-latest
